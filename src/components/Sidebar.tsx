@@ -42,11 +42,11 @@ export default function Sidebar({ isOpen, onClose, onMenuClick }: SidebarProps) 
   };
 
   const menuItems = [
-    { id: 'archived', icon: Archive, label: 'Archived Chats' },
-    { id: 'new-group', icon: Users, label: 'New Group' },
-    { id: 'new-channel', icon: Radio, label: 'New Channel' },
+    { id: 'new-group', icon: Users, label: 'Groups' },
+    { id: 'new-channel', icon: Radio, label: 'Channels' },
     { id: 'contacts', icon: MessageCircle, label: 'Contacts' },
     { id: 'calls', icon: Phone, label: 'Calls' },
+ { id: 'archived', icon: Archive, label: 'Archived Chats' },
     { id: 'saved', icon: Bookmark, label: 'Saved Messages' },
     { id: 'settings', icon: Settings, label: 'Settings' },
   ];
@@ -188,7 +188,7 @@ export default function Sidebar({ isOpen, onClose, onMenuClick }: SidebarProps) 
               isCollapsed ? 'hidden' : 'block'
             }`}
           >
-            WhatsApp Web Clone v1.0
+            VITTS Web v1.0
           </p>
         </div>
       </aside>
