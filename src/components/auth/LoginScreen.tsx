@@ -1,57 +1,55 @@
-import { useState } from 'react';
-import { MessageCircle, Eye, EyeOff } from 'lucide-react';
-import { useAppDispatch } from '../../store/hooks';
-import { login } from '../../store/authSlice';
-import { User } from '../../types';
+import { useState } from 'react'
+import { MessageCircle, Eye, EyeOff } from 'lucide-react'
+import { useAppDispatch } from '../../store/hooks'
+import { login } from '../../store/authSlice'
+import type { User } from '../../types'
 
 interface LoginScreenProps {
-  onSwitchToSignUp: () => void;
+  onSwitchToSignUp: () => void
 }
 
 export default function LoginScreen({ onSwitchToSignUp }: LoginScreenProps) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState<{ username?: string; password?: string }>({});
-
-  const dispatch = useAppDispatch();
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [errors, setErrors] = useState<{ username?: string; password?: string }>({})
+  const dispatch = useAppDispatch()
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newErrors: { username?: string; password?: string } = {};
+    e.preventDefault()
 
-    if (!username.trim()) {
-      newErrors.username = 'Введите имя пользователя';
+    const newErrors: typeof errors = {}
+
+    if (!username.trim()) newErrors.username = 'Введите имя пользователя'
+    if (!password) newErrors.password = 'Введите пароль'
+
+    setErrors(newErrors)
+    if (Object.keys(newErrors).length > 0) return
+
+    try {
+      const storedUsers = localStorage.getItem('users')
+      const users = storedUsers ? (JSON.parse(storedUsers) as (User & { password: string })[]) : []
+
+      const trimmedUsername = username.trim()
+      const foundUser = users.find(u => u.username === trimmedUsername)
+
+      if (!foundUser) {
+        setErrors({ username: 'Пользователь не найден' })
+        return
+      }
+
+      if (foundUser.password !== password) {
+        setErrors({ password: 'Неверный пароль' })
+        return
+      }
+
+      const { password: _, ...safeUser } = foundUser
+      dispatch(login(safeUser))
+    } catch (err) {
+      console.error('Ошибка при входе:', err)
+      setErrors({ username: 'Ошибка входа. Попробуйте позже' })
     }
-
-    if (!password) {
-      newErrors.password = 'Введите пароль';
-    }
-
-    setErrors(newErrors);
-
-    if (Object.keys(newErrors).length > 0) return;
-
-    // Загружаем всех зарегистрированных пользователей
-    const users = JSON.parse(localStorage.getItem('users') || '[]') as (User & { password: string })[];
-
-    // Ищем по username
-    const foundUser = users.find(u => u.username === username.trim());
-
-    if (!foundUser) {
-      setErrors({ username: 'Пользователь не найден' });
-      return;
-    }
-
-    if (foundUser.password !== password) {
-      setErrors({ password: 'Неверный пароль' });
-      return;
-    }
-
-    // Успешный вход — убираем пароль перед сохранением в Redux
-    const { password: _, ...userWithoutPassword } = foundUser;
-    dispatch(login(userWithoutPassword));
-  };
+  }
 
   return (
     <div className="min-h-screen bg-[#111111] flex items-center justify-center p-4">
@@ -71,7 +69,7 @@ export default function LoginScreen({ onSwitchToSignUp }: LoginScreenProps) {
             <input
               type="text"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={e => setUsername(e.target.value)}
               placeholder="johndoe123"
               className="w-full bg-[#1F1F1F] text-white px-4 py-3.5 rounded-lg border border-[#2A2A2A] focus:border-[#00A884] focus:outline-none transition-colors"
               autoFocus
@@ -89,7 +87,7 @@ export default function LoginScreen({ onSwitchToSignUp }: LoginScreenProps) {
             <input
               type={showPassword ? 'text' : 'password'}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={e => setPassword(e.target.value)}
               placeholder="••••••••"
               className="w-full bg-[#1F1F1F] text-white px-4 py-3.5 rounded-lg border border-[#2A2A2A] focus:border-[#00A884] focus:outline-none transition-colors pr-11"
             />
@@ -130,11 +128,10 @@ export default function LoginScreen({ onSwitchToSignUp }: LoginScreenProps) {
 
         <div className="mt-10 text-center text-gray-500 text-xs">
           <p className="flex items-center justify-center gap-1.5">
-            <span className="text-[#00A884]">🔒</span>
-            Сквозное шифрование
+            <span className="text-[#00A884]">🔒</span> Сквозное шифрование
           </p>
         </div>
       </div>
     </div>
-  );
+  )
 }

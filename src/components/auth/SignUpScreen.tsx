@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { MessageCircle, Eye, EyeOff } from 'lucide-react';
 import { useAppDispatch } from '../../store/hooks';
 import { login } from '../../store/authSlice';
-import { User } from '../../types';
+import type { User } from '../../types';
 
 interface SignUpScreenProps {
   onSwitchToLogin: () => void;
@@ -19,33 +19,47 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<number, string>>({});
+  const [registerError, setRegisterError] = useState<string | null>(null);
 
   const dispatch = useAppDispatch();
 
   const validationRules = [
-    { check: () => !phone.startsWith('+') || phone.length < 11 || /\D/.test(phone.slice(1)), message: 'Номер должен начинаться с "+" и содержать минимум 10 цифр' },
-    { check: () => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email), message: 'Введите корректный email' },
-    { check: () => !/^[a-zA-Z][a-zA-Z0-9_]{2,}$/.test(username), message: 'Имя пользователя: начинается с буквы, минимум 3 символа' },
-    { check: () => !name.trim(), message: 'Введите ваше имя' },
     {
-      check: () => {
-        if (password.length < 8) return true;
-        if (!/[A-Z]/.test(password)) return true;
-        if (!/[a-z]/.test(password)) return true;
-        if (!/[0-9]/.test(password)) return true;
-        return false;
-      },
-      message: 'Пароль должен содержать минимум 8 символов, заглавную, строчную букву и цифру'
+      check: () => !phone.startsWith('+') || phone.length < 11 || /[^\d+]/.test(phone),
+      message: 'Номер должен начинаться с "+" и содержать минимум 10 цифр',
     },
-    { check: () => confirmPassword !== password, message: 'Пароли не совпадают' },
+    {
+      check: () => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
+      message: 'Введите корректный email',
+    },
+    {
+      check: () => !/^[a-zA-Z][a-zA-Z0-9_]{2,}$/.test(username),
+      message: 'Имя пользователя: начинается с буквы, минимум 3 символа (буквы, цифры, _)',
+    },
+    {
+      check: () => !name.trim(),
+      message: 'Введите ваше имя',
+    },
+    {
+      check: () =>
+        password.length < 8 ||
+        !/[a-z]/.test(password) ||
+        !/[0-9]/.test(password),
+      message: 'Пароль должен содержать минимум 8 символов, строчную букву и цифру',
+    },
+    {
+      check: () => confirmPassword !== password,
+      message: 'Пароли не совпадают',
+    },
   ];
 
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
-    const rule = validationRules[step - 1];
 
-    if (rule.check()) {
-      setFieldErrors((prev) => ({ ...prev, [step]: rule.message }));
+    const currentRule = validationRules[step - 1];
+
+    if (currentRule.check()) {
+      setFieldErrors((prev) => ({ ...prev, [step]: currentRule.message }));
       return;
     }
 
@@ -57,56 +71,83 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
 
     if (step < 6) {
       setStep(step + 1);
-    } else {
-      // Проверяем уникальность
-      const users = JSON.parse(localStorage.getItem('users') || '[]') as (User & { password: string })[];
+      return;
+    }
 
-      if (users.some(u => u.username === username.trim())) {
-        setFieldErrors({ ...fieldErrors, 3: 'Это имя пользователя уже занято' });
+    // Регистрация
+    setRegisterError(null);
+
+    try {
+      // Безопасное чтение users
+      const stored = localStorage.getItem('users');
+      let users: Array<User & { password: string }> = [];
+
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) users = parsed;
+        } catch {
+          console.warn('Повреждённые данные users → начинаем с пустого массива');
+        }
+      }
+
+      const trimmedUsername = username.trim();
+      const trimmedName = name.trim();
+
+      // Проверка уникальности
+      if (users.some((u) => u.username === trimmedUsername)) {
+        setFieldErrors((prev) => ({ ...prev, 3: 'Это имя пользователя уже занято' }));
+        return;
+      }
+      if (users.some((u) => u.phone === phone)) {
+        setFieldErrors((prev) => ({ ...prev, 1: 'Этот номер телефона уже зарегистрирован' }));
+        return;
+      }
+      if (users.some((u) => u.email === email)) {
+        setFieldErrors((prev) => ({ ...prev, 2: 'Этот email уже зарегистрирован' }));
         return;
       }
 
-      if (users.some(u => u.phone === phone)) {
-        setFieldErrors({ ...fieldErrors, 1: 'Этот номер телефона уже зарегистрирован' });
-        return;
-      }
-
-      if (users.some(u => u.email === email)) {
-        setFieldErrors({ ...fieldErrors, 2: 'Этот email уже зарегистрирован' });
-        return;
-      }
-
-      // Создаём пользователя
+      // Новый пользователь
       const newUser: User & { password: string } = {
-        id: 'user-' + Date.now(),
+        id: `user-${Date.now()}`,
         phone,
         email,
-        username: username.trim(),
-        name: name.trim(),
+        username: trimmedUsername,
+        name: trimmedName,
         about: 'Привет! Я использую это приложение.',
         lastSeen: Date.now(),
         isOnline: true,
-        password, // ← сохраняем пароль (только для демо!)
+        password,
       };
 
-      // Сохраняем в localStorage
-      const updatedUsers = [...users, newUser];
-      localStorage.setItem('users', JSON.stringify(updatedUsers));
+      const updated = [...users, newUser];
+      localStorage.setItem('users', JSON.stringify(updated));
 
       // Автологин
-      const { password: _, ...userWithoutPassword } = newUser;
-      dispatch(login(userWithoutPassword));
+      const { password: _, ...safeUser } = newUser;
+      dispatch(login(safeUser));
+
+      console.log('Аккаунт успешно создан:', trimmedUsername);
+    } catch (err) {
+      console.error('Ошибка регистрации:', err);
+      setRegisterError('Не удалось создать аккаунт. Попробуйте позже.');
     }
   };
 
   const handleBack = () => {
     setFieldErrors({});
+    setRegisterError(null);
     setStep((prev) => Math.max(1, prev - 1));
   };
 
   const isCurrentStepValid = !validationRules[step - 1]?.check();
 
-  const getCurrentField = () => {
+  // ────────────────────────────────────────────────
+  //                RENDER
+  // ────────────────────────────────────────────────
+
+  const renderCurrentField = () => {
     const error = fieldErrors[step];
 
     switch (step) {
@@ -119,14 +160,14 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
               value={phone}
               onChange={(e) => {
                 let val = e.target.value;
-                if (val === '' || val.startsWith('+')) {
+                if (!val || val.startsWith('+')) {
                   val = '+' + val.slice(1).replace(/\D/g, '');
                 } else {
-                  val = val.replace(/\D/g, '');
+                  val = '+' + val.replace(/\D/g, '');
                 }
                 setPhone(val);
               }}
-              placeholder="+1234567890"
+              placeholder="+821012341234"
               className="w-full bg-[#1F1F1F] text-white px-4 py-3.5 rounded-lg border border-[#2A2A2A] focus:border-[#00A884] focus:outline-none transition-colors"
               autoFocus
             />
@@ -249,7 +290,14 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
         </div>
 
         <form onSubmit={handleNext} className="space-y-6">
-          <div>{getCurrentField()}</div>
+          <div>{renderCurrentField()}</div>
+
+          {/* Ошибка при сохранении */}
+          {registerError && (
+            <p className="text-red-400 text-sm text-center bg-red-950/40 p-3 rounded border border-red-800/50">
+              {registerError}
+            </p>
+          )}
 
           <div className="flex gap-3 mt-8">
             {step > 1 && (
@@ -261,6 +309,7 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
                 Назад
               </button>
             )}
+
             <button
               type="submit"
               disabled={!isCurrentStepValid}
