@@ -33,6 +33,7 @@ function App() {
 
   const dispatch = useAppDispatch();
 
+  // Инициализация мок-данных после авторизации
   useEffect(() => {
     if (!isAuthenticated || chats.length > 0) return;
 
@@ -51,11 +52,13 @@ function App() {
     initializeMockData();
   }, [isAuthenticated, chats.length, dispatch]);
 
+  // Очистка просроченных сторис каждую минуту
   useEffect(() => {
     const interval = setInterval(() => dispatch(cleanupExpiredStories()), 60000);
     return () => clearInterval(interval);
   }, [dispatch]);
 
+  // Применение темы
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
@@ -66,6 +69,7 @@ function App() {
     setIsSidebarOpen(false);
   };
 
+  // Если не авторизован — показываем экран входа/регистрации
   if (!isAuthenticated) {
     return authView === 'login' ? (
       <LoginScreen onSwitchToSignUp={() => setAuthView('signup')} />
@@ -74,9 +78,11 @@ function App() {
     );
   }
 
+  // Основной интерфейс после авторизации
   return (
     <div className={`h-screen flex flex-col overflow-hidden ${theme === 'dark' ? 'bg-[#111111]' : 'bg-gray-50'}`}>
       <div className="flex-1 flex overflow-hidden">
+        {/* Боковая панель */}
         <Sidebar
           isOpen={isSidebarOpen}
           onClose={() => setIsSidebarOpen(false)}
@@ -84,6 +90,7 @@ function App() {
         />
 
         <div className="flex-1 flex overflow-hidden">
+          {/* Левая панель с чатами/каналами/группами/звонками */}
           <div
             className={`
               flex-shrink-0 w-full lg:w-[420px] flex flex-col border-r border-gray-800/40
@@ -94,13 +101,27 @@ function App() {
               <ChatList
                 onMenuClick={() => setIsSidebarOpen(true)}
                 onStoryClick={() => setShowStories(true)}
+                onSettingsClick={() => setShowSettings(true)} // ← передаём открытие настроек
               />
             )}
-            {mobileTab === 'channels' && <div className="flex-1 flex items-center justify-center text-gray-400">Channels (coming soon)</div>}
-            {mobileTab === 'groups' && <div className="flex-1 flex items-center justify-center text-gray-400">Groups (coming soon)</div>}
-            {mobileTab === 'calls' && <div className="flex-1 flex items-center justify-center text-gray-400">Calls (coming soon)</div>}
+            {mobileTab === 'channels' && (
+              <div className="flex-1 flex items-center justify-center text-gray-400 bg-[#0f0f0f]">
+                Channels (coming soon)
+              </div>
+            )}
+            {mobileTab === 'groups' && (
+              <div className="flex-1 flex items-center justify-center text-gray-400 bg-[#0f0f0f]">
+                Groups (coming soon)
+              </div>
+            )}
+            {mobileTab === 'calls' && (
+              <div className="flex-1 flex items-center justify-center text-gray-400 bg-[#0f0f0f]">
+                Calls (coming soon)
+              </div>
+            )}
           </div>
 
+          {/* Правая панель — окно чата */}
           <div className="flex-1 min-w-0 relative bg-[#0f0f0f]">
             {activeChat ? (
               <ChatWindow onBack={() => dispatch({ type: 'chats/setActiveChat', payload: null })} />
@@ -112,15 +133,19 @@ function App() {
                   </svg>
                 </div>
                 <h2 className="text-xl font-medium text-gray-300 mb-2">Выберите чат</h2>
-                <p className="text-sm opacity-70 max-w-xs text-center">Начните общение с друзьями</p>
+                <p className="text-sm opacity-70 max-w-xs text-center">
+                  Начните общение с друзьями и семьёй
+                </p>
               </div>
             )}
           </div>
         </div>
       </div>
 
+      {/* Мобильная нижняя панель (только когда нет активного чата) */}
       {!activeChat && <MobileTabBar activeTab={mobileTab} onTabChange={setMobileTab} />}
 
+      {/* Модалки/оверлеи */}
       {showStories && <Stories onClose={() => setShowStories(false)} />}
       {showProfile && <ProfileView onClose={() => setShowProfile(false)} />}
       {showSettings && <Settings onClose={() => setShowSettings(false)} />}

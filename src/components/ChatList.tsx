@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Search, MoreVertical, Users, Star, CheckSquare, CheckCircle, LogOut } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import { setActiveChat, setSearchQuery, setFilter } from '../store/chatsSlice';
@@ -8,9 +9,10 @@ import { formatTimestamp } from '../utils/formatters';
 interface ChatListProps {
   onMenuClick: () => void;
   onStoryClick: () => void;
+  onSettingsClick: () => void; // ← функция открытия настроек
 }
 
-export default function ChatList({ onMenuClick, onStoryClick }: ChatListProps) {
+export default function ChatList({ onMenuClick, onStoryClick, onSettingsClick }: ChatListProps) {
   const { chats, searchQuery, filter, activeChat } = useAppSelector((state) => state.chats);
   const { stories } = useAppSelector((state) => state.stories);
   const { currentUser } = useAppSelector((state) => state.auth);
@@ -19,7 +21,7 @@ export default function ChatList({ onMenuClick, onStoryClick }: ChatListProps) {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Закрытие меню по клику вне области (оверлей + меню)
+  // Закрытие меню по клику вне области
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (showMenu && menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -63,77 +65,91 @@ export default function ChatList({ onMenuClick, onStoryClick }: ChatListProps) {
               <MoreVertical className="w-5 h-5 text-gray-400" />
             </button>
 
-            {/* Анимированный оверлей + меню */}
-            {showMenu && (
-              <>
-                {/* Оверлей с fade-in анимацией */}
-                <div
-                  className={`
-                    fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-all duration-300 ease-in-out
-                    ${showMenu ? 'opacity-100' : 'opacity-0 pointer-events-none'}
-                  `}
-                  onClick={() => setShowMenu(false)}
-                />
+            {/* Анимированное меню + оверлей */}
+            <AnimatePresence>
+              {showMenu && (
+                <>
+                  {/* Оверлей */}
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+                    onClick={() => setShowMenu(false)}
+                  />
 
-                {/* Само меню с scale + fade анимацией */}
-                <div
-                  className={`
-                    absolute right-0 top-full mt-2 w-72 bg-[#1F1F1F] rounded-xl shadow-2xl border border-[#2A2A2A] overflow-hidden z-50
-                    transform origin-top-right transition-all duration-300 ease-out
-                    ${showMenu ? 'scale-100 opacity-100 translate-y-0' : 'scale-90 opacity-0 -translate-y-4 pointer-events-none'}
-                  `}
-                >
-                  {/* Десктоп/планшет версия (с иконками) */}
-                  <div className="hidden lg:block divide-y divide-[#2A2A2A]">
-                    <button className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-[#2A2A2A] text-white text-left transition-colors">
-                      <Users size={18} className="text-gray-400" />
-                      <span>New Group</span>
-                    </button>
-                    <button className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-[#2A2A2A] text-white text-left transition-colors">
-                      <Star size={18} className="text-gray-400" />
-                      <span>Starred Messages</span>
-                    </button>
-                    <button className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-[#2A2A2A] text-white text-left transition-colors">
-                      <CheckSquare size={18} className="text-gray-400" />
-                      <span>Select Chats</span>
-                    </button>
-                    <button className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-[#2A2A2A] text-white text-left transition-colors">
-                      <CheckCircle size={18} className="text-gray-400" />
-                      <span>Mark all as read</span>
-                    </button>
-                    <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-[#2A2A2A] text-red-400 text-left transition-colors"
-                    >
-                      <LogOut size={18} />
-                      <span>Logout</span>
-                    </button>
-                  </div>
+                  {/* Меню */}
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9, y: -10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9, y: -10 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                    className={`
+                      absolute top-full mt-1 w-52 bg-[#1F1F1F] rounded-xl shadow-2xl overflow-hidden z-50
+                      pt-1 pb-1
+                      ${window.innerWidth >= 1024 ? 'left-0' : 'right-0'}
+                    `}
+                  >
+                    {/* Десктоп/планшет версия */}
+                    <div className="hidden lg:block">
+                      <button className="w-full flex items-center gap-2 px-3 py-2 hover:bg-[#2A2A2A]/70 text-white text-left transition-colors text-xs">
+                        <Users size={15} className="text-gray-400" />
+                        <span>New Group</span>
+                      </button>
+                      <button className="w-full flex items-center gap-2 px-3 py-2 hover:bg-[#2A2A2A]/70 text-white text-left transition-colors text-xs">
+                        <Star size={15} className="text-gray-400" />
+                        <span>Starred Messages</span>
+                      </button>
+                      <button className="w-full flex items-center gap-2 px-3 py-2 hover:bg-[#2A2A2A]/70 text-white text-left transition-colors text-xs">
+                        <CheckSquare size={15} className="text-gray-400" />
+                        <span>Select Chats</span>
+                      </button>
+                      <button className="w-full flex items-center gap-2 px-3 py-2 hover:bg-[#2A2A2A]/70 text-white text-left transition-colors text-xs">
+                        <CheckCircle size={15} className="text-gray-400" />
+                        <span>Mark all as read</span>
+                      </button>
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-2 px-3 py-2 hover:bg-[#2A2A2A]/70 text-red-400 text-left transition-colors text-xs"
+                      >
+                        <LogOut size={15} />
+                        <span>Logout</span>
+                      </button>
+                    </div>
 
-                  {/* Мобильная версия (без иконок) */}
-                  <div className="lg:hidden divide-y divide-[#2A2A2A]">
-                    <button className="w-full px-5 py-3.5 hover:bg-[#2A2A2A] text-white text-left transition-colors">
-                      New group
-                    </button>
-                    <button className="w-full px-5 py-3.5 hover:bg-[#2A2A2A] text-white text-left transition-colors">
-                      New channel
-                    </button>
-                    <button className="w-full px-5 py-3.5 hover:bg-[#2A2A2A] text-white text-left transition-colors">
-                      Linked devices
-                    </button>
-                    <button className="w-full px-5 py-3.5 hover:bg-[#2A2A2A] text-white text-left transition-colors">
-                      Starred
-                    </button>
-                    <button className="w-full px-5 py-3.5 hover:bg-[#2A2A2A] text-white text-left transition-colors">
-                      Read all
-                    </button>
-                    <button className="w-full px-5 py-3.5 hover:bg-[#2A2A2A] text-white text-left transition-colors">
-                      Settings
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
+                    {/* Мобильная версия */}
+                    <div className="lg:hidden">
+                      <button className="w-full px-3 py-2 hover:bg-[#2A2A2A]/70 text-white text-left transition-colors text-xs">
+                        New group
+                      </button>
+                      <button className="w-full px-3 py-2 hover:bg-[#2A2A2A]/70 text-white text-left transition-colors text-xs">
+                        New channel
+                      </button>
+                      <button className="w-full px-3 py-2 hover:bg-[#2A2A2A]/70 text-white text-left transition-colors text-xs">
+                        Linked devices
+                      </button>
+                      <button className="w-full px-3 py-2 hover:bg-[#2A2A2A]/70 text-white text-left transition-colors text-xs">
+                        Starred
+                      </button>
+                      <button className="w-full px-3 py-2 hover:bg-[#2A2A2A]/70 text-white text-left transition-colors text-xs">
+                        Read all
+                      </button>
+                      {/* Settings — открывает модальное окно настроек */}
+                      <button
+                        onClick={() => {
+                          onSettingsClick(); // ← открывает настройки
+                          setShowMenu(false);
+                        }}
+                        className="w-full px-3 py-2 hover:bg-[#2A2A2A]/70 text-white text-left transition-colors text-xs"
+                      >
+                        Settings
+                      </button>
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
