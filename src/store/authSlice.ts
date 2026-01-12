@@ -7,10 +7,19 @@ interface AuthState {
 }
 
 const loadFromStorage = (): AuthState => {
-  const stored = localStorage.getItem('auth');
-  if (stored) {
-    return JSON.parse(stored);
+  try {
+    const stored = localStorage.getItem('auth');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Basic validation to prevent corrupted state
+      if (parsed && typeof parsed.isAuthenticated === 'boolean') {
+        return parsed as AuthState;
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to load auth from localStorage:', error);
   }
+
   return {
     currentUser: null,
     isAuthenticated: false,
@@ -23,19 +32,29 @@ const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
+    // Login / successful registration
     login: (state, action: PayloadAction<User>) => {
       state.currentUser = action.payload;
       state.isAuthenticated = true;
       localStorage.setItem('auth', JSON.stringify(state));
     },
+
+    // Full logout — clear auth completely
     logout: (state) => {
       state.currentUser = null;
       state.isAuthenticated = false;
       localStorage.removeItem('auth');
+      // Optional: clear other user-related data
+      // localStorage.removeItem('user-preferences');
     },
+
+    // Update current user's profile fields
     updateProfile: (state, action: PayloadAction<Partial<User>>) => {
       if (state.currentUser) {
-        state.currentUser = { ...state.currentUser, ...action.payload };
+        state.currentUser = {
+          ...state.currentUser,
+          ...action.payload,
+        };
         localStorage.setItem('auth', JSON.stringify(state));
       }
     },

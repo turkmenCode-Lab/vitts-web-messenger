@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Eye, EyeOff } from 'lucide-react';
 import { useAppDispatch } from '../../store/hooks';
 import { login } from '../../store/authSlice';
 import { User } from '../../types';
@@ -11,37 +11,51 @@ interface LoginScreenProps {
 export default function LoginScreen({ onSwitchToSignUp }: LoginScreenProps) {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState<{ identifier?: string; password?: string }>({});
+
   const dispatch = useAppDispatch();
+
+  const validatePassword = (pwd: string): string | null => {
+    if (pwd.length < 8) return 'Пароль должен содержать минимум 8 символов';
+    if (!/[A-Z]/.test(pwd)) return 'Пароль должен содержать хотя бы одну заглавную букву';
+    if (!/[a-z]/.test(pwd)) return 'Пароль должен содержать хотя бы одну строчную букву';
+    if (!/[0-9]/.test(pwd)) return 'Пароль должен содержать хотя бы одну цифру';
+    return null;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    const newErrors: { identifier?: string; password?: string } = {};
 
     if (!identifier.trim()) {
-      setError('Please enter your phone number or email');
-      return;
+      newErrors.identifier = 'Введите номер телефона или email';
     }
 
-    if (!password) {
-      setError('Please enter your password');
-      return;
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      newErrors.password = passwordError;
+    } else if (!password) {
+      newErrors.password = 'Введите пароль';
     }
 
-    // For demo purposes - in real app this would be API call
-    const isPhone = identifier.startsWith('+');
-    const mockUser: User = {
-      id: 'demo-user-' + Date.now(),
-      phone: isPhone ? identifier : '',
-      email: isPhone ? '' : identifier,
-      username: 'user_' + Math.floor(Math.random() * 10000),
-      name: 'Demo User',
-      about: 'Hey there! I am using this chat app.',
-      lastSeen: Date.now(),
-      isOnline: true,
-    };
+    setErrors(newErrors);
 
-    dispatch(login(mockUser));
+    // Если ошибок нет → логин
+    if (Object.keys(newErrors).length === 0) {
+      const isPhone = identifier.startsWith('+');
+      const mockUser: User = {
+        id: 'demo-user-' + Date.now(),
+        phone: isPhone ? identifier : '',
+        email: isPhone ? '' : identifier,
+        username: 'user_' + Math.floor(Math.random() * 10000),
+        name: 'Demo User',
+        about: 'Привет! Я использую это приложение.',
+        lastSeen: Date.now(),
+        isOnline: true,
+      };
+      dispatch(login(mockUser));
+    }
   };
 
   return (
@@ -51,59 +65,73 @@ export default function LoginScreen({ onSwitchToSignUp }: LoginScreenProps) {
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-[#00A884] mb-6 mx-auto">
             <MessageCircle className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-3xl font-light text-white mb-2">Sign In</h1>
-          <p className="text-gray-400 text-sm">Welcome back</p>
+          <h1 className="text-3xl font-light text-white mb-2">Вход</h1>
+          <p className="text-gray-400 text-sm">С возвращением!</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Поле Телефон / Email */}
           <div>
-            <label className="block text-[#00A884] text-sm mb-2">
-              Phone number or email
-            </label>
+            <label className="block text-[#00A884] text-sm mb-2">Телефон или email</label>
             <input
               type="text"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
-              placeholder="Enter your username"
+              placeholder="+66 123 456 789 или example@email.com"
               className="w-full bg-[#1F1F1F] text-white px-4 py-3.5 rounded-lg border border-[#2A2A2A] focus:border-[#00A884] focus:outline-none transition-colors"
               autoFocus
             />
+            {errors.identifier && (
+              <p className="text-red-400 text-xs mt-2 bg-red-950/30 p-2 rounded border border-red-800/50">
+                {errors.identifier}
+              </p>
+            )}
           </div>
 
+          {/* Поле Пароль */}
           <div>
-            <label className="block text-[#00A884] text-sm mb-2">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full bg-[#1F1F1F] text-white px-4 py-3.5 rounded-lg border border-[#2A2A2A] focus:border-[#00A884] focus:outline-none transition-colors"
-            />
+            <label className="block text-[#00A884] text-sm mb-2">Пароль</label>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full bg-[#1F1F1F] text-white px-4 py-3.5 rounded-lg border border-[#2A2A2A] focus:border-[#00A884] focus:outline-none transition-colors pr-11"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200 transition-colors"
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} /> }
+              </button>
+            </div>
+            {errors.password && (
+              <p className="text-red-400 text-xs mt-2 bg-red-950/30 p-2 rounded border border-red-800/50">
+                {errors.password}
+              </p>
+            )}
           </div>
 
-          {error && (
-            <p className="text-red-400 text-sm bg-red-950/30 p-3 rounded border border-red-800/50">
-              {error}
-            </p>
-          )}
-
+          {/* Кнопка */}
           <button
             type="submit"
             className="w-full bg-[#00A884] hover:bg-[#00c896] text-white py-3.5 rounded-lg font-medium transition-colors mt-4"
           >
-            Sign In
+            Войти
           </button>
         </form>
 
         <div className="mt-8 text-center">
           <p className="text-gray-500 text-sm">
-            Don't have an account?{' '}
+            Нет аккаунта?{' '}
             <button
               type="button"
               onClick={onSwitchToSignUp}
               className="text-[#00A884] hover:underline font-medium"
             >
-              Sign up
+              Зарегистрироваться
             </button>
           </p>
         </div>
@@ -111,7 +139,7 @@ export default function LoginScreen({ onSwitchToSignUp }: LoginScreenProps) {
         <div className="mt-10 text-center text-gray-500 text-xs">
           <p className="flex items-center justify-center gap-1.5">
             <span className="text-[#00A884]">🔒</span>
-            End-to-end encrypted
+            Сквозное шифрование
           </p>
         </div>
       </div>
