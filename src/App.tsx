@@ -1,10 +1,10 @@
-// App.tsx
+// src/App.tsx
 import { useEffect, useState } from 'react';
 import { useAppSelector, useAppDispatch } from './store/hooks';
 import {
   setChats,
   setActiveChat,
-} from './store/chatsSlice'; // предполагаем, что у тебя есть такие actions
+} from './store/chatsSlice';
 import { setMessages } from './store/messagesSlice';
 import {
   setStories,
@@ -33,19 +33,24 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [authView, setAuthView] = useState<'login' | 'signup'>('login');
 
-  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, user } = useAppSelector((state) => state.auth);
   const { chats, activeChat } = useAppSelector((state) => state.chats);
-  const { theme } = useAppSelector((state) => state.settings); // если есть слайс настроек
+  const { theme } = useAppSelector((state) => state.settings || { theme: 'dark' });
 
   const dispatch = useAppDispatch();
 
-  // Инициализация мок-данных ТОЛЬКО один раз после первого входа
+  // Отладка: смотрим изменения авторизации
+  useEffect(() => {
+    console.log('[App] isAuthenticated changed →', isAuthenticated);
+    console.log('[App] current user →', user);
+  }, [isAuthenticated, user]);
+
+  // Инициализация мок-данных после первого входа
   useEffect(() => {
     if (!isAuthenticated) return;
     if (chats.length > 0) return;
 
     const alreadyInitialized = localStorage.getItem('mockDataInitialized') === 'true';
-
     if (!alreadyInitialized) {
       try {
         const mockChats = generateMockChats();
@@ -53,30 +58,28 @@ function App() {
         const mockStories = generateMockStories();
 
         dispatch(setChats(mockChats));
-
         Object.entries(mockMessages).forEach(([chatId, messages]) => {
           dispatch(setMessages({ chatId, messages }));
         });
-
         dispatch(setStories(mockStories));
 
         localStorage.setItem('mockDataInitialized', 'true');
+        console.log('[App] Мок-данные успешно инициализированы');
       } catch (err) {
-        console.error('Ошибка при создании мок-данных:', err);
+        console.error('[App] Ошибка инициализации мок-данных:', err);
       }
     }
   }, [isAuthenticated, chats.length, dispatch]);
 
-  // Периодическая очистка просроченных сторис
+  // Очистка просроченных сторис
   useEffect(() => {
     const interval = setInterval(() => {
       dispatch(cleanupExpiredStories());
     }, 60000);
-
     return () => clearInterval(interval);
   }, [dispatch]);
 
-  // Тема приложения
+  // Тема
   useEffect(() => {
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
@@ -91,8 +94,9 @@ function App() {
     setIsSidebarOpen(false);
   };
 
-  // Если не авторизован → показываем авторизацию
+  // Если не авторизован — показываем экраны входа/регистрации
   if (!isAuthenticated) {
+    console.log('[App] Показываем экран авторизации');
     return authView === 'login' ? (
       <LoginScreen onSwitchToSignUp={() => setAuthView('signup')} />
     ) : (
@@ -100,7 +104,8 @@ function App() {
     );
   }
 
-  // Основной интерфейс после входа
+  console.log('[App] Показываем основной интерфейс приложения');
+
   return (
     <div
       className={`h-screen flex flex-col overflow-hidden ${
@@ -108,7 +113,6 @@ function App() {
       }`}
     >
       <div className="flex-1 flex overflow-hidden">
-        {/* Боковая панель (desktop + мобильное меню) */}
         <Sidebar
           isOpen={isSidebarOpen}
           onClose={() => setIsSidebarOpen(false)}
@@ -116,7 +120,7 @@ function App() {
         />
 
         <div className="flex-1 flex overflow-hidden">
-          {/* Левая колонка: список чатов / каналы / группы / звонки */}
+          {/* Левая панель */}
           <div
             className={`
               flex-shrink-0 w-full lg:w-[420px] flex flex-col border-r border-gray-800/40
@@ -130,32 +134,15 @@ function App() {
                 onSettingsClick={() => setShowSettings(true)}
               />
             )}
-
-            {mobileTab === 'channels' && (
-              <div className="flex-1 flex items-center justify-center text-gray-400">
-                <p>Каналы (скоро появятся)</p>
-              </div>
-            )}
-
-            {mobileTab === 'groups' && (
-              <div className="flex-1 flex items-center justify-center text-gray-400">
-                <p>Группы (скоро появятся)</p>
-              </div>
-            )}
-
-            {mobileTab === 'calls' && (
-              <div className="flex-1 flex items-center justify-center text-gray-400">
-                <p>Звонки (скоро появятся)</p>
-              </div>
-            )}
+            {mobileTab === 'channels' && <div className="flex-1 flex items-center justify-center text-gray-400">Каналы (скоро)</div>}
+            {mobileTab === 'groups' && <div className="flex-1 flex items-center justify-center text-gray-400">Группы (скоро)</div>}
+            {mobileTab === 'calls' && <div className="flex-1 flex items-center justify-center text-gray-400">Звонки (скоро)</div>}
           </div>
 
-          {/* Правая часть — окно чата */}
+          {/* Правая часть — чат */}
           <div className="flex-1 min-w-0 relative bg-[#0f0f0f]">
             {activeChat ? (
-              <ChatWindow
-                onBack={() => dispatch(setActiveChat(null))}
-              />
+              <ChatWindow onBack={() => dispatch(setActiveChat(null))} />
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500">
                 <div className="w-28 h-28 rounded-full bg-[#00A884]/10 flex items-center justify-center mb-8">
@@ -173,12 +160,10 @@ function App() {
         </div>
       </div>
 
-      {/* Мобильная нижняя навигация (только если нет открытого чата) */}
       {!activeChat && (
         <MobileTabBar activeTab={mobileTab} onTabChange={setMobileTab} />
       )}
 
-      {/* Модальные окна / оверлеи */}
       {showStories && <Stories onClose={() => setShowStories(false)} />}
       {showProfile && <ProfileView onClose={() => setShowProfile(false)} />}
       {showSettings && <Settings onClose={() => setShowSettings(false)} />}

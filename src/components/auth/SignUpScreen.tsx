@@ -23,17 +23,22 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
 
   const dispatch = useAppDispatch();
 
+  const getPhoneDigits = (val: string) => val.replace(/[^\d]/g, '');
+
   const validationRules = [
     {
-      check: () => !phone.startsWith('+') || phone.length < 11 || /[^\d+]/.test(phone),
+      check: () => {
+        const digits = getPhoneDigits(phone);
+        return !phone.startsWith('+') || digits.length < 10;
+      },
       message: 'Номер должен начинаться с "+" и содержать минимум 10 цифр',
     },
     {
-      check: () => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
+      check: () => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()),
       message: 'Введите корректный email',
     },
     {
-      check: () => !/^[a-zA-Z][a-zA-Z0-9_]{2,}$/.test(username),
+      check: () => !/^[a-zA-Z][a-zA-Z0-9_]{2,}$/.test(username.trim()),
       message: 'Имя пользователя: начинается с буквы, минимум 3 символа (буквы, цифры, _)',
     },
     {
@@ -45,7 +50,7 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
         password.length < 8 ||
         !/[a-z]/.test(password) ||
         !/[0-9]/.test(password),
-      message: 'Пароль должен содержать минимум 8 символов, строчную букву и цифру',
+      message: 'Пароль: минимум 8 символов, строчная буква и цифра',
     },
     {
       check: () => confirmPassword !== password,
@@ -57,8 +62,7 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
     e.preventDefault();
 
     const currentRule = validationRules[step - 1];
-
-    if (currentRule.check()) {
+    if (currentRule?.check()) {
       setFieldErrors((prev) => ({ ...prev, [step]: currentRule.message }));
       return;
     }
@@ -78,7 +82,6 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
     setRegisterError(null);
 
     try {
-      // Безопасное чтение users
       const stored = localStorage.getItem('users');
       let users: Array<User & { password: string }> = [];
 
@@ -91,6 +94,8 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
         }
       }
 
+      const trimmedPhone = phone.trim();
+      const trimmedEmail = email.trim();
       const trimmedUsername = username.trim();
       const trimmedName = name.trim();
 
@@ -99,26 +104,25 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
         setFieldErrors((prev) => ({ ...prev, 3: 'Это имя пользователя уже занято' }));
         return;
       }
-      if (users.some((u) => u.phone === phone)) {
+      if (users.some((u) => u.phone === trimmedPhone)) {
         setFieldErrors((prev) => ({ ...prev, 1: 'Этот номер телефона уже зарегистрирован' }));
         return;
       }
-      if (users.some((u) => u.email === email)) {
+      if (users.some((u) => u.email === trimmedEmail)) {
         setFieldErrors((prev) => ({ ...prev, 2: 'Этот email уже зарегистрирован' }));
         return;
       }
 
-      // Новый пользователь
       const newUser: User & { password: string } = {
-        id: `user-${Date.now()}`,
-        phone,
-        email,
+        id: `user-${Date.now()}${Math.floor(Math.random() * 1000)}`,
+        phone: trimmedPhone,
+        email: trimmedEmail,
         username: trimmedUsername,
         name: trimmedName,
         about: 'Привет! Я использую это приложение.',
         lastSeen: Date.now(),
         isOnline: true,
-        password,
+        password, // ← просто пароль как строка (без хеширования)
       };
 
       const updated = [...users, newUser];
@@ -144,7 +148,7 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
   const isCurrentStepValid = !validationRules[step - 1]?.check();
 
   // ────────────────────────────────────────────────
-  //                RENDER
+  // RENDER (оставил почти как было, только улучшил читаемость)
   // ────────────────────────────────────────────────
 
   const renderCurrentField = () => {
@@ -160,11 +164,7 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
               value={phone}
               onChange={(e) => {
                 let val = e.target.value;
-                if (!val || val.startsWith('+')) {
-                  val = '+' + val.slice(1).replace(/\D/g, '');
-                } else {
-                  val = '+' + val.replace(/\D/g, '');
-                }
+                val = '+' + val.replace(/[^\d+]/g, '').replace(/^\+/, '');
                 setPhone(val);
               }}
               placeholder="+821012341234"
@@ -176,46 +176,27 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
         );
 
       case 2:
-        return (
-          <>
-            <label className="block text-[#00A884] text-sm mb-2">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="example@email.com"
-              className="w-full bg-[#1F1F1F] text-white px-4 py-3.5 rounded-lg border border-[#2A2A2A] focus:border-[#00A884] focus:outline-none transition-colors"
-              autoFocus
-            />
-            {error && <p className="text-red-400 text-xs mt-2 bg-red-950/30 p-2 rounded">{error}</p>}
-          </>
-        );
-
       case 3:
-        return (
-          <>
-            <label className="block text-[#00A884] text-sm mb-2">Имя пользователя</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="johndoe123"
-              className="w-full bg-[#1F1F1F] text-white px-4 py-3.5 rounded-lg border border-[#2A2A2A] focus:border-[#00A884] focus:outline-none transition-colors"
-              autoFocus
-            />
-            {error && <p className="text-red-400 text-xs mt-2 bg-red-950/30 p-2 rounded">{error}</p>}
-          </>
-        );
-
       case 4:
+        const fields = [
+          null,
+          null,
+          { label: 'Email', value: email, setter: setEmail, placeholder: 'example@email.com' },
+          { label: 'Имя пользователя', value: username, setter: setUsername, placeholder: 'johndoe123' },
+          { label: 'Полное имя', value: name, setter: setName, placeholder: 'John Doe' },
+        ];
+
+        const field = fields[step];
+        if (!field) return null;
+
         return (
           <>
-            <label className="block text-[#00A884] text-sm mb-2">Полное имя</label>
+            <label className="block text-[#00A884] text-sm mb-2">{field.label}</label>
             <input
               type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="John Doe"
+              value={field.value}
+              onChange={(e) => field.setter(e.target.value)}
+              placeholder={field.placeholder}
               className="w-full bg-[#1F1F1F] text-white px-4 py-3.5 rounded-lg border border-[#2A2A2A] focus:border-[#00A884] focus:outline-none transition-colors"
               autoFocus
             />
@@ -224,49 +205,32 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
         );
 
       case 5:
-        return (
-          <>
-            <label className="block text-[#00A884] text-sm mb-2">Пароль</label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full bg-[#1F1F1F] text-white px-4 py-3.5 rounded-lg border border-[#2A2A2A] focus:border-[#00A884] pr-11"
-                autoFocus
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200 transition-colors"
-              >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
-            {error && <p className="text-red-400 text-xs mt-2 bg-red-950/30 p-2 rounded">{error}</p>}
-          </>
-        );
-
       case 6:
+        const isConfirm = step === 6;
+        const show = isConfirm ? showConfirmPassword : showPassword;
+        const toggle = isConfirm ? setShowConfirmPassword : setShowPassword;
+        const value = isConfirm ? confirmPassword : password;
+        const setValue = isConfirm ? setConfirmPassword : setPassword;
+        const label = isConfirm ? 'Подтвердите пароль' : 'Пароль';
+
         return (
           <>
-            <label className="block text-[#00A884] text-sm mb-2">Подтвердите пароль</label>
+            <label className="block text-[#00A884] text-sm mb-2">{label}</label>
             <div className="relative">
               <input
-                type={showConfirmPassword ? 'text' : 'password'}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                type={show ? 'text' : 'password'}
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
                 placeholder="••••••••"
                 className="w-full bg-[#1F1F1F] text-white px-4 py-3.5 rounded-lg border border-[#2A2A2A] focus:border-[#00A884] pr-11"
                 autoFocus
               />
               <button
                 type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200 transition-colors"
+                onClick={() => toggle(!show)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
               >
-                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                {show ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
             {error && <p className="text-red-400 text-xs mt-2 bg-red-950/30 p-2 rounded">{error}</p>}
@@ -292,7 +256,6 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
         <form onSubmit={handleNext} className="space-y-6">
           <div>{renderCurrentField()}</div>
 
-          {/* Ошибка при сохранении */}
           {registerError && (
             <p className="text-red-400 text-sm text-center bg-red-950/40 p-3 rounded border border-red-800/50">
               {registerError}
@@ -309,7 +272,6 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
                 Назад
               </button>
             )}
-
             <button
               type="submit"
               disabled={!isCurrentStepValid}

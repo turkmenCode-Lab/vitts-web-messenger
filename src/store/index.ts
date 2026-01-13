@@ -1,17 +1,10 @@
-import { configureStore, isPlain } from '@reduxjs/toolkit';
+// src/store/index.ts или src/store.ts
+import { configureStore } from '@reduxjs/toolkit';
 import authReducer from './authSlice';
 import chatsReducer from './chatsSlice';
 import messagesReducer from './messagesSlice';
 import storiesReducer from './storiesSlice';
 import settingsReducer from './settingsSlice';
-
-// Опционально: кастомная проверка сериализуемости (если хочешь быть строже)
-const isSerializable = (value: unknown): boolean => {
-  // Разрешаем Date → преобразуется в строку при JSON.stringify
-  if (value instanceof Date) return true;
-  // Разрешаем другие типы, если они действительно нужны
-  return isPlain(value);
-};
 
 export const store = configureStore({
   reducer: {
@@ -23,43 +16,17 @@ export const store = configureStore({
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
-      // Самый эффективный способ убрать предупреждения при большом количестве сообщений
       serializableCheck: {
-        // Отключаем проверку для частей стора, где много данных
-        ignoredActions: [
-          'messages/setMessages',
-          'messages/addMessage',
-          'messages/updateMessage',
-          // добавь другие actions, которые часто работают с большими массивами
-        ],
-        ignoredPaths: [
-          'messages',      // весь слайс messages
-          'chats.list',    // если у тебя chats содержит большой массив
-          'stories.items', // если сторис тоже могут быть тяжёлыми
-        ],
-        // Если хочешь быть очень строгим, можно оставить проверку только для auth и settings
-        // warnAfter: 100, // можно увеличить порог предупреждения (по умолчанию 32 мс)
+        // игнорируем предупреждения о несериализуемых значениях в тяжёлых слайсах
+        ignoredActions: ['messages/setMessages', 'messages/addMessage'],
+        ignoredPaths: ['messages', 'chats.list', 'stories.items'],
       },
-
       immutableCheck: {
-        // Аналогично — отключаем для тяжёлых частей
-        ignoredPaths: [
-          'messages',
-          'chats.list',
-          'stories.items',
-        ],
-        // warnAfter: 100,
+        ignoredPaths: ['messages', 'chats.list', 'stories.items'],
       },
     }),
-  // devTools: process.env.NODE_ENV !== 'production',  // по умолчанию включены в dev
+  devTools: process.env.NODE_ENV !== 'production',
 });
 
-// Типы для использования в хуках
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
-
-// Опционально: для удобства типизации thunk'ов и т.п.
-export type AppThunk<ReturnType = void> = (
-  dispatch: AppDispatch,
-  getState: () => RootState
-) => ReturnType;

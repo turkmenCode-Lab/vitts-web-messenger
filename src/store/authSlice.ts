@@ -1,65 +1,37 @@
+// src/store/authSlice.ts
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { User } from '../types';
+import type { User } from '../types'; // предполагаем, что тип User существует
 
 interface AuthState {
-  currentUser: User | null;
   isAuthenticated: boolean;
+  user: User | null;
 }
 
-const loadFromStorage = (): AuthState => {
-  try {
-    const stored = localStorage.getItem('auth');
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      // Basic validation to prevent corrupted state
-      if (parsed && typeof parsed.isAuthenticated === 'boolean') {
-        return parsed as AuthState;
-      }
-    }
-  } catch (error) {
-    console.warn('Failed to load auth from localStorage:', error);
-  }
-
-  return {
-    currentUser: null,
-    isAuthenticated: false,
-  };
+const initialState: AuthState = {
+  isAuthenticated: false,
+  user: null,
 };
-
-const initialState: AuthState = loadFromStorage();
 
 const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    // Login / successful registration
-    login: (state, action: PayloadAction<User>) => {
-      state.currentUser = action.payload;
+    login(state, action: PayloadAction<User>) {
       state.isAuthenticated = true;
-      localStorage.setItem('auth', JSON.stringify(state));
+      state.user = action.payload;
     },
-
-    // Full logout — clear auth completely
-    logout: (state) => {
-      state.currentUser = null;
+    logout(state) {
       state.isAuthenticated = false;
-      localStorage.removeItem('auth');
-      // Optional: clear other user-related data
-      // localStorage.removeItem('user-preferences');
+      state.user = null;
     },
-
-    // Update current user's profile fields
-    updateProfile: (state, action: PayloadAction<Partial<User>>) => {
-      if (state.currentUser) {
-        state.currentUser = {
-          ...state.currentUser,
-          ...action.payload,
-        };
-        localStorage.setItem('auth', JSON.stringify(state));
+    // на будущее — обновление данных пользователя
+    updateUser(state, action: PayloadAction<Partial<User>>) {
+      if (state.user) {
+        state.user = { ...state.user, ...action.payload };
       }
     },
   },
 });
 
-export const { login, logout, updateProfile } = authSlice.actions;
+export const { login, logout, updateUser } = authSlice.actions;
 export default authSlice.reducer;
