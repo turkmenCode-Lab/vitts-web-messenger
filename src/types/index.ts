@@ -73,3 +73,5 @@ export interface Settings {
   profilePhotoVisible: "everyone" | "contacts" | "nobody";
   language: string;
 }
+
+export type MobileTab = "chats" | "channels" | "groups" | "calls";

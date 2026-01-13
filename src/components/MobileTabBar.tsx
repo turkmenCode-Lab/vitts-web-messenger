@@ -1,15 +1,16 @@
 import { MessageCircle, Radio, Users, Phone } from "lucide-react";
+import { MobileTab } from "../types";
 
 interface MobileTabBarProps {
-  activeTab: string;
-  onTabChange: (tab: string) => void;
+  activeTab: MobileTab;
+  onTabChange: (tab: MobileTab) => void;
 }
 
 export default function MobileTabBar({
   activeTab,
   onTabChange,
 }: MobileTabBarProps) {
-  const tabs = [
+  const tabs: { id: MobileTab; label: string; icon: any }[] = [
     { id: "chats", label: "Chats", icon: MessageCircle },
     { id: "channels", label: "Channels", icon: Radio },
     { id: "groups", label: "Groups", icon: Users },
