@@ -6,6 +6,7 @@ interface AuthState {
   token: string | null;
   status: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
+  isAuthenticated: boolean;
 }
 
 const initialState: AuthState = {
@@ -13,6 +14,7 @@ const initialState: AuthState = {
   token: null,
   status: "idle",
   error: null,
+  isAuthenticated: false,
 };
 
 export const login = createAsyncThunk(
