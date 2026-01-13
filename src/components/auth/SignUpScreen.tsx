@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { MessageCircle, Eye, EyeOff } from 'lucide-react';
-import { useAppDispatch } from '../../store/hooks';
-import { login } from '../../store/authSlice';
-import type { User } from '../../types';
+import { useState } from "react";
+import { MessageCircle, Eye, EyeOff } from "lucide-react";
+import { useAppDispatch } from "../../store/hooks";
+import { login } from "../../store/authSlice";
+import type { User } from "../../types";
 
 interface SignUpScreenProps {
   onSwitchToLogin: () => void;
@@ -10,12 +10,12 @@ interface SignUpScreenProps {
 
 export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
   const [step, setStep] = useState(1);
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [username, setUsername] = useState('');
-  const [name, setName] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<number, string>>({});
@@ -23,38 +23,39 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
 
   const dispatch = useAppDispatch();
 
-  const getPhoneDigits = (val: string) => val.replace(/[^\d]/g, '');
+  const getPhoneDigits = (val: string) => val.replace(/[^\d]/g, "");
 
   const validationRules = [
     {
       check: () => {
         const digits = getPhoneDigits(phone);
-        return !phone.startsWith('+') || digits.length < 10;
+        return !phone.startsWith("+") || digits.length < 10;
       },
       message: 'Номер должен начинаться с "+" и содержать минимум 10 цифр',
     },
     {
       check: () => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()),
-      message: 'Введите корректный email',
+      message: "Введите корректный email",
     },
     {
       check: () => !/^[a-zA-Z][a-zA-Z0-9_]{2,}$/.test(username.trim()),
-      message: 'Имя пользователя: начинается с буквы, минимум 3 символа (буквы, цифры, _)',
+      message:
+        "Имя пользователя: начинается с буквы, минимум 3 символа (буквы, цифры, _)",
     },
     {
       check: () => !name.trim(),
-      message: 'Введите ваше имя',
+      message: "Введите ваше имя",
     },
     {
       check: () =>
         password.length < 8 ||
         !/[a-z]/.test(password) ||
         !/[0-9]/.test(password),
-      message: 'Пароль: минимум 8 символов, строчная буква и цифра',
+      message: "Пароль: минимум 8 символов, строчная буква и цифра",
     },
     {
       check: () => confirmPassword !== password,
-      message: 'Пароли не совпадают',
+      message: "Пароли не совпадают",
     },
   ];
 
@@ -82,7 +83,7 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
     setRegisterError(null);
 
     try {
-      const stored = localStorage.getItem('users');
+      const stored = localStorage.getItem("users");
       let users: Array<User & { password: string }> = [];
 
       if (stored) {
@@ -90,7 +91,9 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
           const parsed = JSON.parse(stored);
           if (Array.isArray(parsed)) users = parsed;
         } catch {
-          console.warn('Повреждённые данные users → начинаем с пустого массива');
+          console.warn(
+            "Повреждённые данные users → начинаем с пустого массива"
+          );
         }
       }
 
@@ -101,15 +104,24 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
 
       // Проверка уникальности
       if (users.some((u) => u.username === trimmedUsername)) {
-        setFieldErrors((prev) => ({ ...prev, 3: 'Это имя пользователя уже занято' }));
+        setFieldErrors((prev) => ({
+          ...prev,
+          3: "Это имя пользователя уже занято",
+        }));
         return;
       }
       if (users.some((u) => u.phone === trimmedPhone)) {
-        setFieldErrors((prev) => ({ ...prev, 1: 'Этот номер телефона уже зарегистрирован' }));
+        setFieldErrors((prev) => ({
+          ...prev,
+          1: "Этот номер телефона уже зарегистрирован",
+        }));
         return;
       }
       if (users.some((u) => u.email === trimmedEmail)) {
-        setFieldErrors((prev) => ({ ...prev, 2: 'Этот email уже зарегистрирован' }));
+        setFieldErrors((prev) => ({
+          ...prev,
+          2: "Этот email уже зарегистрирован",
+        }));
         return;
       }
 
@@ -119,23 +131,23 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
         email: trimmedEmail,
         username: trimmedUsername,
         name: trimmedName,
-        about: 'Привет! Я использую это приложение.',
+        about: "Привет! Я использую это приложение.",
         lastSeen: Date.now(),
         isOnline: true,
         password, // ← просто пароль как строка (без хеширования)
       };
 
       const updated = [...users, newUser];
-      localStorage.setItem('users', JSON.stringify(updated));
+      localStorage.setItem("users", JSON.stringify(updated));
 
       // Автологин
       const { password: _, ...safeUser } = newUser;
       dispatch(login(safeUser));
 
-      console.log('Аккаунт успешно создан:', trimmedUsername);
+      console.log("Аккаунт успешно создан:", trimmedUsername);
     } catch (err) {
-      console.error('Ошибка регистрации:', err);
-      setRegisterError('Не удалось создать аккаунт. Попробуйте позже.');
+      console.error("Ошибка регистрации:", err);
+      setRegisterError("Не удалось создать аккаунт. Попробуйте позже.");
     }
   };
 
@@ -147,10 +159,6 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
 
   const isCurrentStepValid = !validationRules[step - 1]?.check();
 
-  // ────────────────────────────────────────────────
-  // RENDER (оставил почти как было, только улучшил читаемость)
-  // ────────────────────────────────────────────────
-
   const renderCurrentField = () => {
     const error = fieldErrors[step];
 
@@ -158,20 +166,26 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
       case 1:
         return (
           <>
-            <label className="block text-[#00A884] text-sm mb-2">Номер телефона</label>
+            <label className="block text-[#00A884] text-sm mb-2">
+              Номер телефона
+            </label>
             <input
               type="tel"
               value={phone}
               onChange={(e) => {
                 let val = e.target.value;
-                val = '+' + val.replace(/[^\d+]/g, '').replace(/^\+/, '');
+                val = "+" + val.replace(/[^\d+]/g, "").replace(/^\+/, "");
                 setPhone(val);
               }}
               placeholder="+821012341234"
               className="w-full bg-[#1F1F1F] text-white px-4 py-3.5 rounded-lg border border-[#2A2A2A] focus:border-[#00A884] focus:outline-none transition-colors"
               autoFocus
             />
-            {error && <p className="text-red-400 text-xs mt-2 bg-red-950/30 p-2 rounded">{error}</p>}
+            {error && (
+              <p className="text-red-400 text-xs mt-2 bg-red-950/30 p-2 rounded">
+                {error}
+              </p>
+            )}
           </>
         );
 
@@ -181,9 +195,24 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
         const fields = [
           null,
           null,
-          { label: 'Email', value: email, setter: setEmail, placeholder: 'example@email.com' },
-          { label: 'Имя пользователя', value: username, setter: setUsername, placeholder: 'johndoe123' },
-          { label: 'Полное имя', value: name, setter: setName, placeholder: 'John Doe' },
+          {
+            label: "Email",
+            value: email,
+            setter: setEmail,
+            placeholder: "example@email.com",
+          },
+          {
+            label: "Имя пользователя",
+            value: username,
+            setter: setUsername,
+            placeholder: "johndoe123",
+          },
+          {
+            label: "Полное имя",
+            value: name,
+            setter: setName,
+            placeholder: "John Doe",
+          },
         ];
 
         const field = fields[step];
@@ -191,7 +220,9 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
 
         return (
           <>
-            <label className="block text-[#00A884] text-sm mb-2">{field.label}</label>
+            <label className="block text-[#00A884] text-sm mb-2">
+              {field.label}
+            </label>
             <input
               type="text"
               value={field.value}
@@ -200,7 +231,11 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
               className="w-full bg-[#1F1F1F] text-white px-4 py-3.5 rounded-lg border border-[#2A2A2A] focus:border-[#00A884] focus:outline-none transition-colors"
               autoFocus
             />
-            {error && <p className="text-red-400 text-xs mt-2 bg-red-950/30 p-2 rounded">{error}</p>}
+            {error && (
+              <p className="text-red-400 text-xs mt-2 bg-red-950/30 p-2 rounded">
+                {error}
+              </p>
+            )}
           </>
         );
 
@@ -211,14 +246,14 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
         const toggle = isConfirm ? setShowConfirmPassword : setShowPassword;
         const value = isConfirm ? confirmPassword : password;
         const setValue = isConfirm ? setConfirmPassword : setPassword;
-        const label = isConfirm ? 'Подтвердите пароль' : 'Пароль';
+        const label = isConfirm ? "Подтвердите пароль" : "Пароль";
 
         return (
           <>
             <label className="block text-[#00A884] text-sm mb-2">{label}</label>
             <div className="relative">
               <input
-                type={show ? 'text' : 'password'}
+                type={show ? "text" : "password"}
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 placeholder="••••••••"
@@ -233,7 +268,11 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
                 {show ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
-            {error && <p className="text-red-400 text-xs mt-2 bg-red-950/30 p-2 rounded">{error}</p>}
+            {error && (
+              <p className="text-red-400 text-xs mt-2 bg-red-950/30 p-2 rounded">
+                {error}
+              </p>
+            )}
           </>
         );
 
@@ -277,11 +316,11 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
               disabled={!isCurrentStepValid}
               className={`flex-1 py-3.5 rounded-lg font-medium transition-colors ${
                 isCurrentStepValid
-                  ? 'bg-[#00A884] hover:bg-[#00c896] text-white'
-                  : 'bg-[#00A884]/50 cursor-not-allowed text-white/60'
+                  ? "bg-[#00A884] hover:bg-[#00c896] text-white"
+                  : "bg-[#00A884]/50 cursor-not-allowed text-white/60"
               }`}
             >
-              {step < 6 ? 'Далее' : 'Создать аккаунт'}
+              {step < 6 ? "Далее" : "Создать аккаунт"}
             </button>
           </div>
         </form>
@@ -291,7 +330,7 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
             <div
               key={i}
               className={`w-2.5 h-2.5 rounded-full transition-all ${
-                i + 1 <= step ? 'bg-[#00A884]' : 'bg-gray-700'
+                i + 1 <= step ? "bg-[#00A884]" : "bg-gray-700"
               }`}
             />
           ))}
@@ -299,7 +338,7 @@ export default function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
 
         <div className="mt-10 text-center">
           <p className="text-gray-500 text-sm">
-            Уже есть аккаунт?{' '}
+            Уже есть аккаунт?{" "}
             <button
               type="button"
               onClick={onSwitchToLogin}

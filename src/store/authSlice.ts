@@ -1,6 +1,5 @@
-// src/store/authSlice.ts
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import type { User } from '../types'; // предполагаем, что тип User существует
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import type { User } from "../types";
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -13,7 +12,7 @@ const initialState: AuthState = {
 };
 
 const authSlice = createSlice({
-  name: 'auth',
+  name: "auth",
   initialState,
   reducers: {
     login(state, action: PayloadAction<User>) {
@@ -24,7 +23,6 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       state.user = null;
     },
-    // на будущее — обновление данных пользователя
     updateUser(state, action: PayloadAction<Partial<User>>) {
       if (state.user) {
         state.user = { ...state.user, ...action.payload };
